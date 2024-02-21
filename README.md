@@ -16,3 +16,6 @@ The PCB does 2 things;
 
 ![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/00a1ab72-6e7b-455f-8693-a086ceed744e)
 
+![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/7d9f4682-7b6f-4e20-b274-db8cd1ba5567)
+
+
