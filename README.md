@@ -9,3 +9,6 @@ The PCB does 2 things;
 
 
 ![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/eaf2a75b-1910-4094-af52-3ab17f6d4a18)
+
+
+![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/d4e5e7fd-4e51-45e1-9860-404ca554d5ba)
