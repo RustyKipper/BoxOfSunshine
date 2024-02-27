@@ -1,4 +1,4 @@
-# BoxOfSunshine
+# Solar storage
 Solar battery to inverter interface
 
 This code is for the Rusty Kipper Designs JBD to Solis hybrid inverter interface PCB.
