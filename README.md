@@ -31,13 +31,13 @@ The PCB, BMS, 100A circuit breaker / isolator and indicator led's are to be moun
 
 
 
-Update 11/3/2024
+Update 8/3/2024
 
-The circuit board kaminate has been recieved and populated. The ATMega328 has been flashed with a blink skech to check the circuit is basicaly alive, 5V is being supplied and programming ports are opearational, an led is connected to the relay output, the led flashes as expected.
+The circuit board laminate has been recieved and populated. The ATMega328 has been flashed with a blink skech to check the circuit is basicaly alive, 5V is being supplied and programming ports are opearational, an led is connected to the relay output, the led flashes as expected. As yet its not possible to upload skethes via the serial port however serial data can be read for debugging, uploading the code via the ISCP port works ok, I'll look into this at a later date.
 All components have been fitted into the control box which is made from 2mm sheet aluminium and painted NATo green with orange highlighs which is the colour used for my projects.
 
-A temporary battery has been assembled from 16 x 18650 cells from a defunkt ebike battery and connected to the 'voltage sense' inputs of the pcb and the relevent wires to the BMS together with the battery - wire. A small issue was found with the hard coding part of the pcb which was discoverd when only 13 of the cells showed on the Overkill solar (bluetooth) app, this was soon remidied and the app then showed the full 16 cells with a stable reading of 67.5V.
-Shortly after the bluetooth started to randomly drop out, this became worse over a period of minutes until the app is constantly 'waaiting for BMS'. The BMS is still showing in the serach, all data held in the BMS has been lost, the temperature inputs are shwoing -273 degress.
+A temporary battery has been assembled from 16 x 18650 cells from a defunkt ebike battery and connected to the 'voltage sense' inputs of the pcb and the relevent wires to the BMS together with the battery -Ve wire. A small issue was found with the hard coding part of the pcb which was discoverd when only 13 of the cells showed on the Overkill solar (bluetooth) app, this was soon remidied and the app then showed the full 16 cells with a stable reading of 67.5V which tallied with a reading from a DVM.
+Shortly after the bluetooth started to randomly drop out, this became worse over a period of minutes until the app is constantly 'waiting for BMS'. The BMS is still showing in the serach, all data held in the BMS has been lost, the temperature inputs are shwoing -273 degress. The blue led on the BMS is flashing at 1 second intervals.
 
 
 
