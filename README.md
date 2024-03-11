@@ -22,9 +22,10 @@ The custom PCB will act as a 'companion' board to the BMS and will need to satis
 
 
 The PCB will use an ATMEG328P-AU micro controller as these are cheap, convienient to mount and program by the Arduino IDE. An ICSP port is to be fitted to the board to allow the code to be uploaded and a serial port for debugging purposes.
-RS485 comms is to be handled by the ubiqitus MAX485 and Can bus by a TJA1052I which acording to the data sheet should provide 5000V isolation. 2 SIL isolated DC-DC converter modules are used to both provide 5V for the logic cicuitry and the power for the output side of the Can bus tranceiver.
+RS485 comms is to be handled by the ubiqitus MAX485 and Can bus by a TJA1052I which acording to the data sheet should provide 5000V isolation. 2 x SIL isolated DC-DC converter modules are used to both provide 5V for the logic cicuitry and the power for the output side of the Can bus tranceiver.
 
  
+![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/d1cf9549-a59a-4b67-8e45-e4f9be431aa1)
 
 
 
