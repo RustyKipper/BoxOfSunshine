@@ -1,6 +1,12 @@
 # Solar storage
 Solar battery to inverter interface
 
+A need arose to make use of some redundant roof mounted PV panels so it was decided to install a battery system to store the power generated duing daylight hours and use cheap rate night time electric to completely fill the battery on overcast or winter days. Several comercial batteryies are availiable but they tend to be in a rack mounting format and are very hravy to drag up into the loft space.
+A design has been drawn up to use 16 off 305Ah LifePO4 cells mounted in a linera fasuin to make use of my limited loft space and allow the aprox 120Kg weight of the battery to be mounted up agaist the gable end and over a load bearing wall.
+Another requirement was to build the battery into an metal box to porvide some rudimentery fire proofing.
+
+The system will consist of this 14.6Ah / 48V battery and a Solis hybrid inverter. The battery is to include the BMS, main isolator and a custom made circuit board to act as a 'companion' to the BMS. It will porovide a convienient interface to the battery sense wires thus no requirement to extend the wires that come with the BMS and also to accomadate the front end wiring to the BMS wich allows it to know that the system is a 16S (16 cells in series system.
+
 This code is for the Rusty Kipper Designs JBD to Solis hybrid inverter interface PCB.
 
 The PCB does 2 things;
