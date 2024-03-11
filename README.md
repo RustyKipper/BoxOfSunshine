@@ -25,7 +25,8 @@ The PCB will use an ATMEG328P-AU micro controller as these are cheap, convienien
 RS485 comms is to be handled by the ubiqitus MAX485 and Can bus by a TJA1052I which acording to the data sheet should provide 5000V isolation. 2 x SIL isolated DC-DC converter modules are used to both provide 5V for the logic cicuitry and the power for the output side of the Can bus tranceiver.
 
  
-![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/d1cf9549-a59a-4b67-8e45-e4f9be431aa1)
+![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/80bfe23f-6e01-4851-a208-60c7ab2e3b75)
+
 
 
 
