@@ -21,28 +21,23 @@ The custom PCB will act as a 'companion' board to the BMS and will need to satis
  
 4. To control a heating system to keep the battery pack above a set minimum temperature. This is done by monitoring the pack temperature via the data receivec from the BMS and in turn operates a solid state relay. A solid state relay was       chosen to eliminate any switching noise as 'SSR's generaly use a zero volt switching technique and prevents contacts from erroding in use. A fail safe over temperature switch is to be incorperated onto the internal battery heater          plate in case of the relay failing short circuit.
 
-
-
-The PCB will use an ATMEG328P-AU micro controller as these are cheap, convienient to mount and program by the Arduino IDE. An ICSP port is to be fitted to the board to allow the code to be uploaded and a serial port for debugging purposes.
-RS485 comms is to be handled by the ubiqitus MAX485 and Can bus by a TJA1052I which acording to the data sheet should provide 5000V isolation. 2 x SIL isolated DC-DC converter modules are used to both provide 5V for the logic cicuitry and the power for the output side of the Can bus tranceiver.
-
- 
-
-
-
-
-
-
 ![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/8fdd459a-3a08-4481-8e2a-692963963aa8)
 
+The PCB will use an ATMEG328P-AU micro controller as these are cheap, convienient to mount and program by the Arduino IDE. An ICSP port is to be fitted to the board to allow the code to be uploaded and a serial port for debugging purposes.
+RS485 comms is to be handled by the ubiqitus MAX485 and Can bus by a TJA1052I which acording to the data sheet should provide 5000V isolation. 2 x SIL isolated DC-DC converter modules are used to both provide 5V for the logic cicuitry and the power for the output side of the Can bus tranceiver. An RJ45 socket is fitted to the board to allow direct connection to the inverter with via the supplied cable.
+
+ 
+The PCB, BMS, 100A circuit breaker / isolator and indicator led's are to be mounted into a 'control box' mounted on the front of the main battery assembly for good access for maintenace.
 
 
-![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/d4e5e7fd-4e51-45e1-9860-404ca554d5ba)
 
-![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/00a1ab72-6e7b-455f-8693-a086ceed744e)
+Update 11/3/2024
 
+The circuit board kaminate has been recieved and populated. The ATMega328 has been flashed with a blink skech to check the circuit is basicaly alive, 5V is being supplied and programming ports are opearational, an led is connected to the relay output, the led flashes as expected.
+All components have been fitted into the control box which is made from 2mm sheet aluminium and painted NATo green with orange highlighs which is the colour used for my projects.
 
-![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/e1899716-46f9-40d1-ae5e-22499ca01d6f)
+A temporary battery has been assembled from 16 x 18650 cells from a defunkt ebike battery and connected to the 'voltage sense' inputs of the pcb and the relevent wires to the BMS together with the battery - wire. A small issue was found with the hard coding part of the pcb which was discoverd when only 13 of the cells showed on the Overkill solar (bluetooth) app, this was soon remidied and the app then showed the full 16 cells with a stable reading of 67.5V.
+Shortly after the bluetooth started to randomly drop out, this became worse over a period of minutes until the app is constantly 'waaiting for BMS'. The BMS is still showing in the serach, all data held in the BMS has been lost, the temperature inputs are shwoing -273 degress.
 
 
 
