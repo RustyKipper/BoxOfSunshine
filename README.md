@@ -4,6 +4,8 @@ Solar battery to inverter interface
 A need arose to make use of some redundant roof mounted PV panels so it was decided to install a battery system to store the power generated duing daylight hours and use cheap rate night time electric to make up for any shortfall to fill the battery on overcast or winter days. Several comercial batteries are availiable but they tend to be in a rack mounting format and are very heavy to drag up into the loft space.
 A design has been drawn up to use 16 off 305Ah LifePO4 cells mounted in a linear fasion to make use of my limited loft space and allow the aprox 120Kg weight of the battery to be mounted up agaist the gable end and over a load bearing wall. Another requirement was to build the battery into an metal box to porvide some rudimentery fire proofing.
 
+![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/80bfe23f-6e01-4851-a208-60c7ab2e3b75)
+
 The system will consist of this 14.6Ah / 48V battery and a Solis hybrid inverter. and a custom designed circuit board to interface the BMS to the inverter.
 
 As the chosen inverter can charge and discharge at up to 100A a JBD-AP21S002 200A unit was chosen, this gives a good current headroom, can be configured for 7 - 21 cells, has inbuilt Bluetooth and an accessable RS485 port.
@@ -25,7 +27,7 @@ The PCB will use an ATMEG328P-AU micro controller as these are cheap, convienien
 RS485 comms is to be handled by the ubiqitus MAX485 and Can bus by a TJA1052I which acording to the data sheet should provide 5000V isolation. 2 x SIL isolated DC-DC converter modules are used to both provide 5V for the logic cicuitry and the power for the output side of the Can bus tranceiver.
 
  
-![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/80bfe23f-6e01-4851-a208-60c7ab2e3b75)
+
 
 
 
