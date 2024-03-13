@@ -4,6 +4,7 @@
    This code then reads these via RS485 and stores them in an array, which is then
    broken down into individual parts, converted to human readable format for debugging
    and send via can bus to the invrter.
+Currently there is no error checking on the received RS485.
 */
 
 #include <Arduino.h>
@@ -15,7 +16,6 @@
 
 const byte rxPin = 2;                       //  RS485 receive pin
 const byte txPin = 3;                       //  RS485 transmit pin
-
 const byte heater = 5;                      //  heater relay output pin
 const byte comms = 14;                      //  comms good led output pin
 const byte charge = 15;                     //  charge led output pin
