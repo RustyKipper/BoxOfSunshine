@@ -336,10 +336,14 @@ void showNewDataHEX() {//------- prints line of full recieved data in HEX format
   if (counter > 10) {
 
 
+    Serial.println(" ");
+    Serial.println(" ");
     Serial.print("Recieved data packet   ");
 
     if (newData == true) {
       for (int i = 0; i < 30; i++) {
+
+
 
         Serial.print(receivedChars[i], HEX);
         Serial.print(" ");
@@ -347,7 +351,8 @@ void showNewDataHEX() {//------- prints line of full recieved data in HEX format
     }
     newData = false;
     Serial.println(" ");
-    Serial.println(" ");
+
+
 
     Serial.print("Voltage  ");
     Serial.println(Voltage);
@@ -356,12 +361,17 @@ void showNewDataHEX() {//------- prints line of full recieved data in HEX format
     Serial.print("balance capacity  ");
     Serial.println(Ah_rate);
     Serial.print("temperature 1:  ");
-    Serial.print(temperature_1);
-    Serial.print("      temperature 2:  ");
-    Serial.print(temperature_2);
-    Serial.print("      temperature 3:  ");
+    Serial.println(temperature_1);
+    Serial.print("temperature 2:  ");
+    Serial.println(temperature_2);
+    Serial.print("temperature 3:  ");
     Serial.println(temperature_3);
     Serial.println(" ");
+
+    Serial.println(" ");
+    Serial.println("Flags");
+    Serial.println(" ");
+
     Serial.print("cell OVP:  ");
     Serial.println(singleCellOVP);
     Serial.print("cell UVP:  ");
@@ -371,27 +381,23 @@ void showNewDataHEX() {//------- prints line of full recieved data in HEX format
     Serial.print("pack UVP:  ");
     Serial.println(packUVP);
     Serial.print("charge Hi Temp:  ");
-    Serial.println(chargeHiTemp);    
+    Serial.println(chargeHiTemp);
     Serial.print("charge Lo Temp:  ");
     Serial.println(chargeLoTemp);
     Serial.print("discharge Hi Temp:  ");
-    Serial.println(dischargeHiTemp);    
+    Serial.println(dischargeHiTemp);
     Serial.print("discharge Lo Temp:  ");
     Serial.println(dischargeLoTemp);
-    Serial.println("charge Over Current:  ");
-    Serial.println(chargeOverCurrent);            
-/*
-
-
-  dischargeOverCurrent = bitRead(prot_status_low_byte, 1);
-  shortCircuit_flag =    bitRead(prot_status_low_byte, 2);
-  frontEndIcFailFlag =   bitRead(prot_status_low_byte, 3);
-  MosSoftwareLockFlag =  bitRead(prot_status_low_byte, 4);
-*/
-
-
-
-    
+    Serial.print("charge Over Current:  ");
+    Serial.println(chargeOverCurrent);
+    Serial.print("discharge Over Current:  ");
+    Serial.println(dischargeOverCurrent);
+    Serial.print("short Circuit flag:  ");
+    Serial.println(shortCircuit_flag);
+    Serial.print("front End Ic Fail Flag:  ");
+    Serial.println(frontEndIcFailFlag);
+    Serial.print("Mos Software Lock Flag:  ");
+    Serial.println(MosSoftwareLockFlag);
 
     counter = 0;
   }
