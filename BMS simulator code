@@ -1,0 +1,305 @@
+// simple serial TX to simulate the RS485 comming from a BMS
+// very much workin progress
+
+
+
+#include <SoftwareSerial.h>
+
+const byte rxPin = 2;
+const byte txPin = 3;
+const byte TX_enable = 4;
+int ledPin = 13;
+int analogPin = A0;
+int analogValue = 0;
+
+const byte numChars = 32;                   //  index for array
+int receivedChars[numChars];
+boolean newData = false;                    //  flag indicating new dataq received
+
+unsigned long previousMillis = 0;           //  used for code cycle timing
+const long interval = 1000;                 //  code cycle time (set for 1 second)
+
+bool ledState = 0;
+
+
+int A = 0xDD;   //  start bit
+int B = 0x03;   //  register address
+int C = 0;      //  error bit
+int D = 0x26;   //  data lengthy
+int E = 0x10;    //  pack voltage hi byte
+int F = 0x19;   //  pack voltage lo byte
+int G = 0;
+int H = 0;
+int I = 0;
+int J = 0;
+int K = 0;
+int L = 0;
+int M = 0;
+int N = 0;
+int O = 0;
+int P = 0;
+int Q = 0;
+int R = 0;
+int S = 0;
+int T = 0;
+int U = 0;
+int V = 0;
+int W = 0;
+int X = 0;
+int Y = 0;
+int Z = 0;
+int a = 0;
+int b = 0;
+int c = 0;
+int d = 0;
+int e = 0;
+int f = 0;
+int g = 0;
+int h = 0;
+int i = 0;
+int j = 0;
+int k = 0;
+int l = 0;
+int m = 0;
+int n = 0;
+
+
+uint8_t data1[40] = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, a, b, c, d, e, f, g, h, i, j, k, l, m, n};
+
+
+float voltage = 42.10; //  float voltage to be sent to interface board
+float current = 98.7; //  float current to be sent to interface board
+
+byte V_hi_byte = 0;
+byte V_lo_byte = 0;
+
+byte A_hi_byte = 0;
+byte A_lo_byte = 0;
+
+
+
+SoftwareSerial RS485Serial (rxPin, txPin);
+
+void setup() {
+
+  pinMode(rxPin, INPUT);
+  pinMode(txPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(TX_enable, OUTPUT);
+  RS485Serial.begin(9600);
+  Serial.begin(9600);
+
+
+}
+//----------------------------------------------------------------------------
+
+
+//DD  A5  AA  0 FF  56  77
+//221 165 170 0 255 86  119
+// from eprom read
+
+
+
+
+void loop() {
+
+  //---------------------- untimed code ----------------------------------------------------
+
+  receive();
+
+
+
+
+
+
+  //----------------------- end of untimed code --------------------------------------------------------
+
+
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= interval) {
+
+    // save the last time you blinked the LED
+    previousMillis = currentMillis;
+    //----------------------------- timed code, this code runs once per second --------------------------
+
+    reply();
+
+    convert();
+
+
+    if (ledState == LOW) {
+      ledState = HIGH;
+    } else {
+      ledState = LOW;
+    }
+
+    digitalWrite(ledPin, ledState);
+
+
+
+
+  }
+}
+
+//----------------- end of loop ------------------------------------------------------
+
+void convert() {
+
+  //--------- print float V, int V, V hi byte, V lo byte -------------
+  long volts = (voltage * 1000);
+  V_hi_byte = (volts >> 8);
+  V_lo_byte = (volts & 0xFF);
+  Serial.print("Voltage:   ");
+  Serial.print(voltage);
+  Serial.print("V");
+  Serial.print("   Voltage int:   ");
+  Serial.print(volts);
+  Serial.print("V");
+  Serial.print("    V hi byte:   ");
+  Serial.print(V_hi_byte, HEX);
+  Serial.print("    V lo byte:   ");
+  Serial.print(V_lo_byte, HEX);
+
+  Serial.println("  ");
+
+  //--------- print float I, int I, I hi byte, I lo byt e-------------
+  long amps = (current * 1000);
+  A_hi_byte = (amps >> 8);
+  A_lo_byte = (amps & 0xFF);
+  Serial.print("Voltage:   ");
+  Serial.print(current);
+  Serial.print("A");
+  Serial.print("   amps int:   ");
+  Serial.print(volts);
+  Serial.print("V");
+  Serial.print("    A hi byte:   ");
+  Serial.print(A_hi_byte, HEX);
+  Serial.print("    A lo byte:   ");
+  Serial.println(A_lo_byte, HEX);
+
+  Serial.println("  ");
+  Serial.println("  ");
+  Serial.println("  ");
+}
+
+//_________________________________________________________________________________________
+
+void receive() {          //------------------- receive serial data from RS485 ----------------
+
+
+  static boolean recvInProgress = false;
+  static byte ndx = 0;
+  char startMarker = 221;
+  char endMarker = 119;
+  char rc;
+
+  while (RS485Serial.available() > 0 && newData == false) {
+
+    rc = RS485Serial.read();
+
+    if (recvInProgress == true) {
+
+      if (rc != endMarker) {
+
+        receivedChars[ndx] = rc;
+        ndx++;
+        if (ndx >= numChars) {
+
+          ndx = numChars - 1;
+        }
+      }
+      else {
+        receivedChars[ndx] = '\0'; // terminate the string
+        recvInProgress = false;
+        ndx = 0;
+        newData = true;
+      }
+    }
+    else if (rc == startMarker) {
+      recvInProgress = true;
+    }
+  }
+}
+
+//------------------------------- reply -----------------------------------
+
+void reply() {
+
+
+
+
+  //                 | A   |  B  |C |  D  |  E  | F   | G   |  H  | I   |     J     |  K  |  L  |M |N | O   |  p  |Q | R   |S |T| U |V| W   |  X  |  Y  |  Z   | a   | b  |  c   | d   | d  |  f   |g |h |   i     |   j     |  k   |l|     m      | n   |
+  uint8_t data[40] = {0xDD, 0x03, 0, 0x26, 0x10, 0x19, 0xF0, 0xD8, 0x4C, 0xFFFFFF8E, 0x4E, 0x20, 0, 0, 0x2D, 0x5C, 0, 0x0A, 0, 0, 0, 0, 0x40, 0x62, 0x03, 0x0A, 0x03, 0x0B, 0x41, 0x0B, 0x14, 0x0B, 0, 0, 0xCF256F, 0xCA5200, 0x3E8, 0, 0xC400C500, 0x77};
+  //                                           42.10V       -100A
+  RS485Serial.write(data, 40);
+
+
+  Serial.println("reply");
+
+  Serial.print(A, HEX);
+  Serial.print(" ");
+  Serial.print(B, HEX);
+  Serial.print(" ");  
+  Serial.print(C, HEX);
+  Serial.println(" ");
+
+  /*
+    A = start bit 0xDD            M                         Y                         k
+    B = rigister address          N                         Z                         l
+    C = error --- 0 = OK          O                         a                         m
+    D = data length               P                         b                         n
+    E = volts low byte            Q                         c                         o
+    F = volts high byte           R                         d
+    G = current low byte          S                         e
+    H = current high byte         T                         f
+    I                             U                         g
+    J                             V                         h
+    K                             W                         i
+    L                             X                         j
+
+
+  */
+
+  //expected reply 34 numbers
+
+  // -  0  1  2  3  4  5  6  7  8
+
+  //DD 03 00 1B 17 07 DA 00 02 D0 03 E8 00 00 20 78 00 00 00 00 00 00 10 48 03 0F 02 0B 76 0B 82 FB FF 77
+
+  //221 3  0 27 23  0  0  0  2 208 3 232 0  0 32 120 0  0  0  0  0  0 16 72  3 15 2 11 118 11 130 251 255 119
+
+
+  //atual
+
+  //3 0 26 10 19 0 0 4C FFFFFF8E 4E 20 0 0 2D 5C 0 A 0 0 0 0 40 62 3 A 3 B 41 B 14 B 0 0 CF256F CA5200 3E8 0 C400C500
+
+  /*
+    digitalWrite(ledPin, HIGH);
+    digitalWrite(TX_enable, HIGH);
+    delay(3);
+    digitalWrite(ledPin, LOW);
+    digitalWrite(TX_enable, LOW);
+  */
+
+}
+
+//---------------------------------------------------------------------------------
+
+void showNewDataHEX() {
+
+  //  this code prints every 10 seconds to make it easier to read on the serial console
+
+
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.print("Recieved data packet   ");
+
+  if (newData == true) {
+    for (int i = 0; i < 30; i++) {
+
+      Serial.print(receivedChars[i], HEX);
+      Serial.print(" ");
+    }
+  }
+}
