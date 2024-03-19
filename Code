@@ -1,4 +1,3 @@
-
 /*This code if for the Rusty Kipper Solar BMS to Solis inverter converter board
    It sends a request to the BMS which then returns a block of data including
    battery Voltage, charge / discharge current, temperature and various flags.
@@ -14,9 +13,9 @@
 
 
 
-const byte rxPin = 2;                       //  RS485 receive pin
-const byte txPin = 3;                       //  RS485 transmit pin
-const byte TX_enable;                       //  RS485 transmit enable pin
+const byte rxPin = 19;                       //  RS485 receive pin (D19)
+const byte txPin = 18;                       //  RS485 transmit pin (D18)
+const byte TX_enable = 4;                    //  RS485 transmit enable pin
 const byte heater = 5;                      //  heater relay output pin
 const byte ledPin = 7;                      //  used for debugging on uno
 const byte comms = 14;                      //  comms good led output pin
@@ -188,6 +187,7 @@ void setup() {
   pinMode(rxPin, INPUT);      //  set RS485 receive pin as input
   pinMode(txPin, OUTPUT);     //  set RS485 transmit pin as output
   pinMode(TX_enable, OUTPUT); //  set RS485 transmit enable pin as output
+  pinMode(heater,OUTPUT);      //  set heater pin as output
   pinMode(comms, OUTPUT);     //  set comms led pin to output
   pinMode(charge, OUTPUT);    //  set charge led pin to output
   pinMode(discharge, OUTPUT); //  set discharge led pin to output
@@ -214,7 +214,7 @@ void setup() {
   digitalWrite(discharge, LOW);
   //----------------------------------------------
 
-
+  digitalWrite(heater, HIGH);
   Serial.println("Rusty Kipper Designs");    //  for debugging this indicates basic comunication with console
 
 
@@ -271,7 +271,7 @@ void loop() {
 
     canbusSend();         //  send can bus message to inverter
 
-    temperatureControl(); //  turn on heater if battery below set tmperature
+   // temperatureControl(); //  turn on heater if battery below set tmperature
 
 
     showNewDataHEX();     // prints line of full recieved data in HEX format for debugging
@@ -291,6 +291,7 @@ void loop() {
 void sendRequest() {        //----------------- request data packet from BMS --------------------
 
   digitalWrite(TX_enable, HIGH);              //  set MAX485 chip to transmit mode
+  digitalWrite(heater, HIGH);
 
   //RS485Serial.write(request, sizeof(7));      //  send request for BMS to send data
 
@@ -301,14 +302,26 @@ void sendRequest() {        //----------------- request data packet from BMS ---
   RS485Serial.write(0xFF);
   RS485Serial.write(0x56);
   RS485Serial.write(119);
+/*
+Serial.println("serial request");
+Serial.print(0xDD);
+Serial.print(0xA5);
+Serial.print(0xAA);
+Serial.print((byte)0x00);
+Serial.print(0xFF);
+Serial.print(0x56);
+Serial.print(119);
+*/
 
 
 
 
-  delay(2);                                   //  short delay to enable serial to finish sending
+
+
+  delay(3);                                   //  short delay to enable serial to finish sending
 
   digitalWrite(TX_enable, LOW);               //  return MAX485 chip back to receive mode
-
+  digitalWrite(heater, LOW);
 }
 
 //________________________________________________________________________________________________________
