@@ -21,14 +21,16 @@ int ledPin = 13;
 int analogPin = A0;
 int analogValue = 0;
 
-const byte numChars = 32;                   //  index for array
+bool ledState = LOW;
+
+const byte numChars = 7;                   //  index for array
 uint8_t receivedChars[numChars];
 boolean newData = false;                    //  flag indicating new dataq received
 
 unsigned long previousMillis = 0;           //  used for code cycle timing
 const long interval = 1000;                 //  code cycle time (set for 1 second)
 
-bool ledState = 0;
+
 
 
 
@@ -41,7 +43,7 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   pinMode(TX_enable, OUTPUT);
   RS485Serial.begin(9600);
-  Serial.begin(9600);
+  Serial.begin(115200);
 
 
 }
@@ -77,7 +79,29 @@ void loop() {
     previousMillis = currentMillis;
     //----------------------------- timed code, this code runs once per second --------------------------
 
+/*
+Serial.print(receivedChars[0]);
+Serial.print(" ");
+Serial.print(receivedChars[1]);
+Serial.print(" ");
+Serial.print(receivedChars[2]);
+Serial.print(" ");
+Serial.print(receivedChars[3]);
+Serial.print(" ");
+Serial.print(receivedChars[4]);
+Serial.println(" ");
+*/
 
+
+showNewData();
+
+
+
+
+
+
+
+   
     if (receivedChars[0]== 0xA5) reply();
 
 
@@ -142,13 +166,32 @@ void reply() {
   
   
   digitalWrite(TX_enable,HIGH);
+  digitalWrite(ledPin,HIGH);
+
   
   RS485Serial.write(data, 40);
 
   delay(3);
 
   digitalWrite(TX_enable,LOW);
-
+  digitalWrite(ledPin,LOW);
 
 }
 
+//-----------------------------------------------------------------------------
+
+void showNewData(){
+    Serial.println(" ");
+    Serial.print("Recieved data packet   ");
+
+    if (newData == true) {
+      for (int i = 0; i < 5; i++) {
+
+        Serial.print(receivedChars[i], HEX);
+        Serial.print(" ");
+      }
+    }
+    newData = false;
+    Serial.println(" ");
+
+}
