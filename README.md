@@ -17,9 +17,9 @@ The custom PCB will act as a 'companion' board to the BMS and will need to satis
 
 2. To allow a convienient way to interface the voltage sence wires to the BMS without having to extend the wires supplied with the BMS kit.
 
-3. To make the required links to the front end of the BMS to hard wire it to a 16S system, this wiring, this can be quiute tricky, confusing and messy if done via the wiring, especialy if the system requires fault finding at a later date.
+3. To make the required links to the front end of the BMS to hard wire it to a 16S system, this wiring can be a bit tricky, confusing and messy if done via the wiring, especialy if the system requires fault finding at a later date.
  
-4. To control a heating system to keep the battery pack above a set minimum temperature. This is done by monitoring the pack temperature via the data receivec from the BMS and in turn operates a solid state relay. A solid state relay was       chosen to eliminate any switching noise as 'SSR's generaly use a zero volt switching technique and prevents contacts from erroding in use. A fail safe over temperature switch is to be incorperated onto the internal battery heater          plate in case of the relay failing short circuit.
+4. To control a heating system to keep the battery pack above a set minimum temperature. This is done by monitoring the pack temperature via the data received from the BMS and in turn operates a solid state relay. A solid state relay was       chosen to eliminate any switching noise as 'SSR's generaly use a zero volt switching technique and prevents contacts from erroding in use. A fail safe over temperature switch is to be incorperated onto the internal battery heater          plate in case of the relay failing short circuit.
 
 ![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/8fdd459a-3a08-4481-8e2a-692963963aa8)
 
