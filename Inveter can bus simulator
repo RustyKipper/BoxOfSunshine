@@ -5,6 +5,16 @@
  * This code uses the awesome Cory Fowler canbus library
  */
 
+/*
+**************************************************************************************************
+                             Disclaimer
+
+Please feel free to use or modify this code, however I am in no way a profesional programer and this
+code is very much work in progress so there will be bugs and mistakes, therefore I can and will not
+be held responsible for any loss damage or mishaps resulting from the use of this code.
+**************************************************************************************************
+*/
+
  // version 1.0
 
 #include <mcp_can.h>
