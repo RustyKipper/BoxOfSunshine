@@ -57,6 +57,9 @@ Below is a screen print of the circuit communicating with the simulator:
 
 ![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/25764f8c-7513-4db7-b8c3-45b2d03e98da)
 
+Control box pcb connections   
+
+   ![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/254a8253-e81b-452c-a375-b80bc09f8f98)
 
 
 
