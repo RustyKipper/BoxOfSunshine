@@ -1,0 +1,232 @@
+/*
+ * This code uploads onto a Uno or similar to comunicate to the Rusty Kipper solar battery interface board'
+ * it will comunicate with the can bus port to test its funcioning in the absence of a suitable inveter
+ * 
+ * This code uses the awesome Cory Fowler canbus library
+ */
+
+ // version 1.0
+
+#include <mcp_can.h>
+#include <SPI.h>
+
+long unsigned int rxId;
+unsigned char len = 0;
+unsigned char rxBuf[8];
+
+int data0 = 0;
+
+// Array to store serial string
+
+#define CAN0_INT 2                              // Set INT to pin 2
+MCP_CAN CAN0(10);                               // Set CS to pin 10
+
+
+void setup()
+{
+  Serial.begin(115200);
+
+  if (CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) == CAN_OK)
+
+    CAN0.setMode(MCP_NORMAL);                     // Set operation mode to normal so the MCP2515 sends acks to received data.
+
+  pinMode(CAN0_INT, INPUT);                            // Configuring pin for /INT input
+
+
+}
+
+
+void loop()
+{
+  if (!digitalRead(CAN0_INT))                        // If CAN0_INT pin is low, read receive buffer
+  {
+
+    CAN0.readMsgBuf(&rxId, &len, rxBuf);
+
+
+
+    int data0 = rxBuf[0];
+    int data1 = rxBuf[1];
+    int data2 = rxBuf[2];
+    int data3 = rxBuf[3];
+    int data4 = rxBuf[4];
+    int data5 = rxBuf[5];
+    int data6 = rxBuf[6];
+    int data7 = rxBuf[7];
+    int data8 = rxBuf[8];
+
+    Serial.print("address  ");    
+    Serial.print(rxId,HEX);
+    Serial.print("   ");
+
+    Serial.print("bytes  ");    
+    Serial.print(len,HEX);
+    Serial.print("         ");    
+
+    Serial.print(data0,HEX);
+    Serial.print(" ");
+    Serial.print(data1,HEX);
+    Serial.print(" ");
+    Serial.print(data2,HEX);
+    Serial.print(" ");
+    Serial.print(data3,HEX);
+    Serial.print(" ");
+    Serial.print(data4,HEX);
+    Serial.print(" ");
+    Serial.print(data5,HEX);
+    Serial.print(" ");
+    Serial.print(data6,HEX);
+    Serial.print(" ");
+    Serial.print(data7,HEX);
+    Serial.println(" ");
+
+    //while (1) {}
+
+    /*
+
+      //----------------------------------------------
+      //----------------------------------------------
+      if (rxId == 0x359) {
+
+      Serial.print("0x359 protection  bits     ");
+      Serial.print(data0);
+      Serial.print(" ");
+      Serial.print(data1);
+      Serial.print(" ");
+      Serial.print(data2);
+      Serial.print(" ");
+      Serial.print(data3);
+      Serial.print(" ");
+      Serial.print(data4);
+      Serial.print(" ");
+      Serial.print(data5);
+      Serial.print(" ");
+      Serial.print(data6);
+      Serial.print(" ");
+      Serial.println(data7);
+      }
+
+
+        //----------------------------------------------
+      if (rxId == 0x351) {
+
+      Serial.print("0x351 charge perameters     ");
+      Serial.print(data0);
+      Serial.print(" ");
+      Serial.print(data1);
+      Serial.print(" ");
+      Serial.print(data2);
+      Serial.print(" ");
+      Serial.print(data3);
+      Serial.print(" ");
+      Serial.print(data4);
+      Serial.print(" ");
+      Serial.print(data5);
+      Serial.print(" ");
+      Serial.print(data6);
+      Serial.print(" ");
+      Serial.println(data7);
+      }
+
+      //------------------------------------------------
+
+      if (rxId == 0x355) {
+
+      Serial.print("0x355 state of charge     ");
+      Serial.print(data0);
+      Serial.print(" ");
+      Serial.print(data1);
+      Serial.print(" ");
+      Serial.print(data2);
+      Serial.print(" ");
+      Serial.print(data3);
+      Serial.print(" ");
+      Serial.print(data4);
+      Serial.print(" ");
+      Serial.print(data5);
+      Serial.print(" ");
+      Serial.print(data6);
+      Serial.print(" ");
+      Serial.println(data7);
+      }
+
+      //------------------------------------------------
+
+      if (rxId == 0x356) {
+
+      Serial.print("0x356 voltage current temp  ");
+      Serial.print("protection     ");
+      Serial.print(data0);
+      Serial.print(" ");
+      Serial.print(data1);
+      Serial.print(" ");
+      Serial.print(data2);
+      Serial.print(" ");
+      Serial.print(data3);
+      Serial.print(" ");
+      Serial.print(data4);
+      Serial.print(" ");
+      Serial.print(data5);
+      Serial.print(" ");
+      Serial.print(data6);
+      Serial.print(" ");
+      Serial.println(data7);
+      }
+
+
+      //------------------------------------------------
+
+
+      if (rxId == 0x35C) {
+
+      Serial.print("0x35C request flags  ");
+      Serial.print("protection     ");
+      Serial.print(data0);
+      Serial.print(" ");
+      Serial.print(data1);
+      Serial.print(" ");
+      Serial.print(data2);
+      Serial.print(" ");
+      Serial.print(data3);
+      Serial.print(" ");
+      Serial.print(data4);
+      Serial.print(" ");
+      Serial.print(data5);
+      Serial.print(" ");
+      Serial.print(data6);
+      Serial.print(" ");
+      Serial.println(data7);
+      }
+
+
+      //------------------------------------------------
+
+
+      if (rxId == 0x35E) {
+
+      Serial.print("0x35E manufacueres name     ");
+      Serial.print(data0);
+      Serial.print(" ");
+      Serial.print(data1);
+      Serial.print(" ");
+      Serial.print(data2);
+      Serial.print(" ");
+      Serial.print(data3);
+      Serial.print(" ");
+      Serial.print(data4);
+      Serial.print(" ");
+      Serial.print(data5);
+      Serial.print(" ");
+      Serial.print(data6);
+      Serial.print(" ");
+      Serial.println(data7);
+
+      }
+    */
+
+  }
+}
+
+/*********************************************************************************************************
+  END FILE
+*********************************************************************************************************/
