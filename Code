@@ -1,10 +1,39 @@
-/*This code if for the Rusty Kipper Solar BMS to Solis inverter converter board
+//*************************************************************************************************
+//  JBD AP21S002 to Solis hybrid inverter sketch  Version 1.0
+
+/*This code if for the Rusty Kipper Solar BMS to Solis inverter converter board (bridge)
    It sends a request to the BMS which then returns a block of data including
    battery Voltage, charge / discharge current, temperature and various flags.
    This code then reads these via RS485 and stores them in an array, which is then
    broken down into individual parts, converted to human readable format for debugging
-   and send via can bus to the invrter.
+   and send via can bus to the inveter.
+
+   Currently it has ben tested to work with my RS485 / BMS simulator code, due to my
+   BMS being out of action it has yet to be tested with the actial unit however a previuos
+   version of this code did work perfectly, also I have yet to test the canbus output as I
+   do not yet have the inverter, the can bus will however be tested shortly with another simulator
+   and the can bus section of the code will be tidied up.
+   This code includes a transmit enable pin and asociated timing to use off the shelf RS485 pcb's.
+
+   The board includes control of a heater for the battery and several outputs for front panel led's.
+   To use the heater output a solid state relay must be used that can accept a logic level input.
+
+   There is a small bug with the temperature reading of 'temperature 1'
+   The code is currently set to debug mode so the serial output of the board can be read via the
+   Arduino IDE serial monitor.
+
 */
+/*
+**************************************************************************************************
+                             Disclaimer
+
+Please feel free to use or modify this code, however I am in no way a profesional programer and this
+code is very much work in progress so there will be bugs and mistakes, therefore I can and will not
+be held responsible for any loss damage or mishaps resulting from the use of this code.
+**************************************************************************************************
+*/
+
+//Version 1.0
 
 #include <Arduino.h>
 #include <SPI.h>
@@ -13,34 +42,32 @@
 
 
 
-const byte rxPin = 19;                       //  RS485 receive pin (D19)
-const byte txPin = 18;                       //  RS485 transmit pin (D18)
-const byte TX_enable = 4;                    //  RS485 transmit enable pin
-const byte heater = 5;                      //  heater relay output pin
-const byte ledPin = 7;                      //  used for debugging on uno
-const byte comms = 14;                      //  comms good led output pin
-const byte charge = 15;                     //  charge led output pin
-const byte discharge = 16;                  //  discharge led output pin
+const byte rxPin = 19;      //  RS485 receive pin (D19)
+const byte txPin = 18;      //  RS485 transmit pin (D18)
+const byte TX_enable = 4;   //  RS485 transmit enable pin
+const byte heater = 5;      //  heater relay output pin
+const byte ledPin = 7;      //  used for debugging on uno
+const byte comms = 14;      //  comms good led output pin
+const byte charge = 15;     //  charge led output pin
+const byte discharge = 16;  //  discharge led output pin
 
-const byte numChars = 40;                   //  index for array
-uint8_t receivedChars[numChars];
-boolean newData = false;                    //  flag indicating new dataq received
-unsigned long previousMillis = 0;           //  used for code cycle timing
-const long interval = 1000;                 //  code cycle time (set for 1 second)
-byte CAN_MSG[8] = {0, 0, 0, 0, 0, 0, 0, 0}; //  array for transmitted can bus message
-uint16_t addressID = 0;                     //  address of can bus message to be sent
+const byte numChars = 40;                      //  index for array
+uint8_t receivedChars[numChars];               //  array for received RS485 data
+boolean newData = false;                       //  flag indicating new dataq received
+unsigned long previousMillis = 0;              //  used for code cycle timing
+const long interval = 1000;                    //  code cycle time (set for 1 second)
+byte CAN_MSG[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };  //  array for transmitted can bus message
+uint16_t addressID = 0;                        //  address of can bus message to be sent
 //byte sndStat = 0;
-uint8_t MSG_RustyK[8] = {'G', 0x52, 0x49, 0x54, 0x45, 0x43, 0x48, 0x20}; //  manufaturers name
+uint8_t MSG_RustyK[8] = { 'G', 0x52, 0x49, 0x54, 0x45, 0x43, 0x48, 0x20 };  //  manufaturers name
 
-int temperaureCombined = 0;                 //  average temperature of NTC2 and NTC3
+int temperaureCombined = 0;  //  average temperature of NTC2 and NTC3
 
-int heaterSet = 15;                         //  ************ this value sets the heater cut un temperature******
+int heaterSet = 15;  //  ************ this value sets the heater cut in temperature in degres C ******
 
-bool ledState = LOW;
+bool ledState = LOW;  //  flashes led for debugging
 
-byte request[] = {0xDD, 0xA5, 0x03, 0x00, 0xFF, 0xFD, 0x77};  //  code sent to BMS to request data
-
-int counter = 10;
+byte request[] = { 0xDD, 0xA5, 0x03, 0x00, 0xFF, 0xFD, 0x77 };  //  code sent to BMS to request data
 
 //------------------------- incoming protection flags from BMS ---------------
 bool singleCellOVP = 0;
@@ -59,139 +86,139 @@ bool MosSoftwareLockFlag = 0;
 
 //------------------ incoming values from BMS --------------------------------
 
-uint8_t read_write =              (receivedChars[0]);   //  0x05 = reading BMS  0x03 = writing to BMS
-uint8_t error_status =            (receivedChars[1]);   //  0x80 = error        0x00  = OK
-uint8_t data_length =             (receivedChars[2]);   //  dta length of received packet including this byte
-uint8_t Volt_low_byte =           (receivedChars[3]);   //  required  total Voltage
-uint8_t Volt_high_byte =          (receivedChars[4]);   //  required  total Voltage
-uint8_t current_high_byte =       (receivedChars[5]);   //  required  current ********* check reads negative
-uint8_t current_low_byte =        (receivedChars[6]);   //  required  current ********* check reads negative
-uint8_t balance_cap_hbyte =       (receivedChars[7]);   //  4 byte long number
-uint8_t balance_cap_lbyte =       (receivedChars[8]);   //  4 byte long number
-uint8_t rate_cap_hbyte =          (receivedChars[9]);   //  capcity of battery in mAh i.e. 305000 = 305Ah
-uint8_t rate_cap_lbyte =          (receivedChars[10]);  //  capcity of battery in mAh i.e. 305000 = 305Ah
-uint8_t cycle_hbyte =             (receivedChars[11]);  //  number of charge / discharge cycles (currently not used)
-uint8_t cycle_lbyte =             (receivedChars[12]);  //  number of charge / discharge cycles (currently not used)
-uint8_t prod_date_hbyte =         (receivedChars[13]);  //  production date of BMS
-uint8_t prod_date_lbyte =         (receivedChars[14]);  //  production date of BMS
-uint8_t bal_status_hbyte =        (receivedChars[15]);  //  8 x cell balance flags  0 = not balancing 1 = balance in progress
-uint8_t bal_status_lbyte =        (receivedChars[16]);  //  8 x cell balance flags  0 = not balancing 1 = balance in progress
-uint8_t prot_status_high_byte =   (receivedChars[19]);  //  8 x cell protection flags 0 = protection off  1 = protection on
-uint8_t prot_status_low_byte =    (receivedChars[20]);  //  8 x cell protection flags 0 = protection off  1 = protection on
-uint8_t versionNo =               (receivedChars[21]);  //  BMS software version
-uint8_t RSOC =                    (receivedChars[22]);  //  remaining charge capaicty 0-100%
-uint8_t fet_status =              (receivedChars[23]);  //  bit 0 = charge 0  bit 1 = discharge   0 = FET off 1 = FET on
-uint8_t num_of_strings =          (receivedChars[24]);  //  number of series connected cells (should read 16)
-uint8_t num_of_NTCS =             (receivedChars[25]);  //  number of temperature thermistors (should read 3)
-uint8_t temperature_1_low_byte =  (receivedChars[26]);  //  thermistor temperature 1
-uint8_t temperatue_1_high_byte =  (receivedChars[27]);  //  thermistor temperature 1
-uint8_t temperature_2_low_byte =  (receivedChars[28]);  //  thermistor temperature 2
-uint8_t temperatue_2_high_byte =  (receivedChars[29]);  //  thermistor temperature 2
-uint8_t temperature_3_low_byte =  (receivedChars[30]);  //  thermistor temperature 3
-uint8_t temperatue_3_high_byte =  (receivedChars[31]);  //  thermistor temperature 3
+uint8_t read_write = (receivedChars[0]);               //  0x05 = reading BMS  0x03 = writing to BMS
+uint8_t error_status = (receivedChars[1]);             //  0x80 = error        0x00  = OK
+uint8_t data_length = (receivedChars[2]);              //  dta length of received packet including this byte
+uint8_t Volt_low_byte = (receivedChars[3]);            //  required  total Voltage
+uint8_t Volt_high_byte = (receivedChars[4]);           //  required  total Voltage
+uint8_t current_high_byte = (receivedChars[5]);        //  required  current ********* check reads negative
+uint8_t current_low_byte = (receivedChars[6]);         //  required  current ********* check reads negative
+uint8_t balance_cap_hbyte = (receivedChars[7]);        //  4 byte long number
+uint8_t balance_cap_lbyte = (receivedChars[8]);        //  4 byte long number
+uint8_t rate_cap_hbyte = (receivedChars[9]);           //  capcity of battery in mAh i.e. 305000 = 305Ah
+uint8_t rate_cap_lbyte = (receivedChars[10]);          //  capcity of battery in mAh i.e. 305000 = 305Ah
+uint8_t cycle_hbyte = (receivedChars[11]);             //  number of charge / discharge cycles (currently not used)
+uint8_t cycle_lbyte = (receivedChars[12]);             //  number of charge / discharge cycles (currently not used)
+uint8_t prod_date_hbyte = (receivedChars[13]);         //  production date of BMS
+uint8_t prod_date_lbyte = (receivedChars[14]);         //  production date of BMS
+uint8_t bal_status_hbyte = (receivedChars[15]);        //  8 x cell balance flags  0 = not balancing 1 = balance in progress
+uint8_t bal_status_lbyte = (receivedChars[16]);        //  8 x cell balance flags  0 = not balancing 1 = balance in progress
+uint8_t prot_status_high_byte = (receivedChars[19]);   //  8 x cell protection flags 0 = protection off  1 = protection on
+uint8_t prot_status_low_byte = (receivedChars[20]);    //  8 x cell protection flags 0 = protection off  1 = protection on
+uint8_t versionNo = (receivedChars[21]);               //  BMS software version
+uint8_t RSOC = (receivedChars[22]);                    //  remaining charge capaicty 0-100%
+uint8_t fet_status = (receivedChars[23]);              //  bit 0 = charge 0  bit 1 = discharge   0 = FET off 1 = FET on
+uint8_t num_of_strings = (receivedChars[24]);          //  number of series connected cells (should read 16)
+uint8_t num_of_NTCS = (receivedChars[25]);             //  number of temperature thermistors (should read 3)
+uint8_t temperature_1_low_byte = (receivedChars[26]);  //  thermistor temperature 1
+uint8_t temperatue_1_high_byte = (receivedChars[27]);  //  thermistor temperature 1
+uint8_t temperature_2_low_byte = (receivedChars[28]);  //  thermistor temperature 2
+uint8_t temperatue_2_high_byte = (receivedChars[29]);  //  thermistor temperature 2
+uint8_t temperature_3_low_byte = (receivedChars[30]);  //  thermistor temperature 3
+uint8_t temperatue_3_high_byte = (receivedChars[31]);  //  thermistor temperature 3
 
 //----------------- converterd numbers ------------------------------------------
 
-uint16_t rate = 0;              //  battery capacity rate in mAh
-int Ah_rate = 0;                //  human readable format for debugging
-int temp_1 = 0;                 //  sined 16 bit int for raw temperature 1
-int temp_2 = 0;                 //  sined 16 bit int for raw temperature 1
-int temp_3 = 0;                 //  sined 16 bit int for raw temperature 1
-int temperature_1 = 0;          //  int for converted temperature
-int temperature_2 = 0;          //  int for converted temperature
-int temperature_3 = 0;          //  int for converted temperature
-
-int V_result = 0;               //  16 bit int for battery Voltage
-int I_result = 0;               //  16 bit int for battery current
-uint8_t amps = 0;               //  8 bit current
-float Voltage = 0.0;            //  human readable float for debugging
-float current = 0.0;            //  human readable float for debugging
+uint16_t rate = 0;      //  battery capacity rate in mAh
+int Ah_rate = 0;        //  human readable format for debugging
+int temp_1 = 0;         //  sined 16 bit int for raw temperature 1
+int temp_2 = 0;         //  sined 16 bit int for raw temperature 1
+int temp_3 = 0;         //  sined 16 bit int for raw temperature 1
+int temperature_1 = 0;  //  int for converted temperature
+int temperature_2 = 0;  //  int for converted temperature
+int temperature_3 = 0;  //  int for converted temperature
+int V_result = 0;       //  16 bit int for battery Voltage
+int I_result = 0;       //  16 bit int for battery current
+uint8_t amps = 0;       //  8 bit current
+float Voltage = 0.0;    //  human readable float for debugging
+float current = 0.0;    //  human readable float for debugging
 
 
 //---------- outgoing values to inverter --------------------------------------------
 
 //protection
-byte byte_A0 = 100; //  0x359   OVP, UVP, Over temp, UT, discharge over current
-byte byte_A1 = 101; //          Over charge current, sytem error
-byte byte_A2 = 102; //          high voltage, low voltage, high temp, low lemp
-byte byte_A3 = 103; //          hich charge current, int comms fail
-byte byte_A4 = 104; //          Modue numbers 8 bit unsigned number
-byte byte_A5 = 105; //          "P" 0x50
-byte byte_A6 = 106; //          "N" 0x4E
+byte byte_A0 = 100;  //  0x359   OVP, UVP, Over temp, UT, discharge over current
+byte byte_A1 = 101;  //          Over charge current, sytem error
+byte byte_A2 = 102;  //          high voltage, low voltage, high temp, low lemp
+byte byte_A3 = 103;  //          hich charge current, int comms fail
+byte byte_A4 = 104;  //          Modue numbers 8 bit unsigned number
+byte byte_A5 = 105;  //          "P" 0x50
+byte byte_A6 = 106;  //          "N" 0x4E
 byte byte_A7 = 107;
 
 //------------------- charge discharge temperature -------------------------------------
 
-byte chargeVoltageLowByte = 0;            //  0x351 charge current low byte
-byte dischargeVoltageHighByte = 1;        //        charge current high byte
-byte chargeCurrentLimitLowByte = 2;       //        charge current limit low byte
-byte chargeCurrentLimitHighByte = 3;      //        charge current limit high byte
-byte dischargeCurrentLimitLowByte = 4;    //        discharge current limit low byte
-byte dischargeCurrentLimitHighByte = 5;   //        discharge current limit high byte
-byte byte_B6 = 6;                         //        not used
-byte byte_B7 = 7;                         //        not used
+byte chargeVoltageLowByte = 0;           //  0x351 charge current low byte
+byte dischargeVoltageHighByte = 1;       //        charge current high byte
+byte chargeCurrentLimitLowByte = 2;      //        charge current limit low byte
+byte chargeCurrentLimitHighByte = 3;     //        charge current limit high byte
+byte dischargeCurrentLimitLowByte = 4;   //        discharge current limit low byte
+byte dischargeCurrentLimitHighByte = 5;  //        discharge current limit high byte
+byte byte_B6 = 6;                        //        not used
+byte byte_B7 = 7;                        //        not used
 
-uint16_t stateOfCharge = 0x00;            //  state of charge read from BMS
+uint16_t stateOfCharge = 0x00;  //  state of charge read from BMS
 uint16_t batVoltage = 0;
 uint16_t batCurrent = 0;
 uint16_t batTemperature = 0;
 uint32_t batCapacity = 0;
 
 //state of charge, state of health
-byte stateOfChargeLowByte = 8;      //     0x355 state of charge low byte (unit 1%)
-byte stateOfChargeHighByte = 9;     //         state of charge high byte (unit 1%)
-byte stateOfHealthLowByte = 10;     //         state of health low byte (unit 1%)
-byte stateOfHealthHighByte = 11;    //        state of health low high (unit 1%)
-byte byte_C4 = 12;   //                      not used
-byte byte_C5 = 13;   //                      not used
-byte byte_C6 = 14;   //                      not used
-byte byte_C7 = 15;   //                      not used
+byte stateOfChargeLowByte = 8;    //     0x355 state of charge low byte (unit 1%)
+byte stateOfChargeHighByte = 9;   //         state of charge high byte (unit 1%)
+byte stateOfHealthLowByte = 10;   //         state of health low byte (unit 1%)
+byte stateOfHealthHighByte = 11;  //        state of health low high (unit 1%)
+byte byte_C4 = 12;                //                      not used
+byte byte_C5 = 13;                //                      not used
+byte byte_C6 = 14;                //                      not used
+byte byte_C7 = 15;                //                      not used
 
-byte packVoltageLowByte = 16;     //  0x356 Pack Voltage low byte (unit 0.01V)
-byte packVoltageHighByte = 17;    //        Pack Voltage high byte (unit 0.01V)
-byte packCurrentLowByte = 18;     //        pack current low byte (unit 0.1A)
-byte packCurrentHighByte = 19;    //        pack current high byte (unit 0.1A)
-byte packTempLowByte = 20;        //        pack temperature low byte (unit 0.1'C)
-byte packTempHighByte = 21;       //        pack temperature high byte (unit 0.1'C)
-byte byte_D6 = 22;                //        not used
-byte byte_D7 = 23;                //        not used
+byte packVoltageLowByte = 16;   //  0x356 Pack Voltage low byte (unit 0.01V)
+byte packVoltageHighByte = 17;  //        Pack Voltage high byte (unit 0.01V)
+byte packCurrentLowByte = 18;   //        pack current low byte (unit 0.1A)
+byte packCurrentHighByte = 19;  //        pack current high byte (unit 0.1A)
+byte packTempLowByte = 20;      //        pack temperature low byte (unit 0.1'C)
+byte packTempHighByte = 21;     //        pack temperature high byte (unit 0.1'C)
+byte byte_D6 = 22;              //        not used
+byte byte_D7 = 23;              //        not used
 
-byte requestFlagLowByte = 0;      //  0x35C request flags
-byte requestFlagHighByte = 0;     //
+byte requestFlagLowByte = 0;   //  0x35C request flags
+byte requestFlagHighByte = 0;  //
 
 
-uint16_t ChargeCurrentLimit = 0xC350;    //  set max charge current to 50A (50,000mA)
+uint16_t ChargeCurrentLimit = 0xC350;  //  set max charge current to 50A (50,000mA)
 
-uint16_t dischargeCurrentLimit = 0xC350; //  set max discharge current to 50A (50,000mA)
+uint16_t dischargeCurrentLimit = 0xC350;  //  set max discharge current to 50A (50,000mA)
 
 //inverter battery limits
 
 uint32_t chargeVoltage = 0;
 uint32_t dischargeVoltage = 0;
-uint32_t chargeCurrent = 0;        //  charge current in mA
-uint32_t dischargeCurrent = 0;     //  discharge current in mA
-
-
+uint32_t chargeCurrent = 0;     //  charge current in mA
+uint32_t dischargeCurrent = 0;  //  discharge current in mA
 
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+SoftwareSerial RS485Serial(rxPin, txPin);  //  set the rx and tx pins for RS485
 
-SoftwareSerial RS485Serial (rxPin, txPin);
-
-MCP_CAN CAN0(10);     // Set CS to pin 10
+MCP_CAN CAN0(10);  // Set CS to pin 10
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void setup() {
-  pinMode(rxPin, INPUT);      //  set RS485 receive pin as input
-  pinMode(txPin, OUTPUT);     //  set RS485 transmit pin as output
-  pinMode(TX_enable, OUTPUT); //  set RS485 transmit enable pin as output
-  pinMode(heater,OUTPUT);      //  set heater pin as output
-  pinMode(comms, OUTPUT);     //  set comms led pin to output
-  pinMode(charge, OUTPUT);    //  set charge led pin to output
-  pinMode(discharge, OUTPUT); //  set discharge led pin to output
+
+  pinMode(rxPin, INPUT);       //  set RS485 receive pin as input
+  pinMode(txPin, OUTPUT);      //  set RS485 transmit pin as output
+  pinMode(TX_enable, OUTPUT);  //  set RS485 transmit enable pin as output
+  pinMode(heater, OUTPUT);     //  set heater pin as output
+  pinMode(comms, OUTPUT);      //  set comms led pin to output
+  pinMode(charge, OUTPUT);     //  set charge led pin to output
+  pinMode(discharge, OUTPUT);  //  set discharge led pin to output
   pinMode(ledPin, OUTPUT);
+
+  Serial.begin(115200);     //  initialise serial for IDE console to allow debugging
+  RS485Serial.begin(9600);  //  initialise serial for RS485
 
   // Initialize MCP2515 running at 16MHz with a baudrate of 500kb/s and the masks and filters disabled.
 
@@ -199,12 +226,15 @@ void setup() {
   else Serial.println("Error Initializing MCP2515...");
 
 
-  CAN0.setMode(MCP_NORMAL);   // Change to normal mode to allow messages to be transmitted
+  CAN0.setMode(MCP_NORMAL);  // Change to normal mode to allow messages to be transmitted
 
-  Serial.begin(115200);       //  initialise serial for IDE console to allow debugging
-  RS485Serial.begin(9600);    //  initialise serial for RS485
+
 
   //---------- startup lamptest -----------------
+
+  //  flash 3 of the front panel led's for 1 second at switch on
+
+
   digitalWrite(comms, HIGH);
   digitalWrite(charge, HIGH);
   digitalWrite(discharge, HIGH);
@@ -213,13 +243,8 @@ void setup() {
   digitalWrite(charge, LOW);
   digitalWrite(discharge, LOW);
   //----------------------------------------------
-
-  digitalWrite(heater, HIGH);
-  Serial.println("Rusty Kipper Designs");    //  for debugging this indicates basic comunication with console
-
-
 }
-//=========================================================================================
+
 //vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv main loop vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 void loop() {
@@ -227,11 +252,7 @@ void loop() {
   //--------------------- untimed code -------this runs constanty in the background-----------------
 
 
-
-  receive();    //  call receive routine
-
-
-
+  receive();  //  call receive routine
 
 
   //------------------------------end of untimed code -------------------------------------------
@@ -259,26 +280,34 @@ void loop() {
     //**************************************************************************************************************
 
 
-    sendRequest();
+    sendRequest();  //  send request code to BMS to as for data packet
+
+    storeIncoming();  //  loads incoming data into individual arrays
+
+    convert();  //  convert values read from BMS to values the inverter can understand
+                //  and human readable format for debugging
+
+    canbusSend();  //  send can bus message to inverter
+
+    temperatureControl();  //  turn on heater if battery below set tmperature
 
 
+    showNewDataHEX();  // prints line of full recieved data in HEX format for debugging
 
 
-    storeIncoming();      //  loads incoming data into individual arrays
+    //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    /*
+this bit is important, it clears the incomming data array so if
+the RS485 is interupted the values are set to zero so the inverter
+will shutdown, without this it will continue to run on the last
+stored set of values.......a bad thing.
+*/
 
-    convert();            //  convert values read from BMS to values the inverter can understand
-    //                            and human readable format for debugging
+    for (int n = 0; n < 35; n++) {
+      receivedChars[n] = 0x00;
+    }
 
-    canbusSend();         //  send can bus message to inverter
-
-   // temperatureControl(); //  turn on heater if battery below set tmperature
-
-
-    showNewDataHEX();     // prints line of full recieved data in HEX format for debugging
-
-
-
-
+    //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     //---------------------------------- end of timed code -------------------------------------------
   }
@@ -288,45 +317,17 @@ void loop() {
 //================================= subroutines =======================================================
 
 
-void sendRequest() {        //----------------- request data packet from BMS --------------------
+void sendRequest() {  //----------------- request data packet from BMS --------------------
 
-  digitalWrite(TX_enable, HIGH);              //  set MAX485 chip to transmit mode
-  digitalWrite(heater, HIGH);
-
-  //RS485Serial.write(request, sizeof(7));      //  send request for BMS to send data
-
-  RS485Serial.write(0xDD);
-  RS485Serial.write(0xA5);
-  RS485Serial.write(0xAA);
-  RS485Serial.write((byte)0x00);
-  RS485Serial.write(0xFF);
-  RS485Serial.write(0x56);
-  RS485Serial.write(119);
-/*
-Serial.println("serial request");
-Serial.print(0xDD);
-Serial.print(0xA5);
-Serial.print(0xAA);
-Serial.print((byte)0x00);
-Serial.print(0xFF);
-Serial.print(0x56);
-Serial.print(119);
-*/
-
-
-
-
-
-
-  delay(3);                                   //  short delay to enable serial to finish sending
-
-  digitalWrite(TX_enable, LOW);               //  return MAX485 chip back to receive mode
-  digitalWrite(heater, LOW);
+  digitalWrite(TX_enable, HIGH);          //  set MAX485 chip to transmit mode
+  RS485Serial.write(request, sizeof(7));  //  send request for BMS to send data
+  delay(3);                               //  short delay to enable serial to finish sending
+  digitalWrite(TX_enable, LOW);           //  return MAX485 chip back to receive mode
 }
 
 //________________________________________________________________________________________________________
 
-void receive() {          //------------------- receive serial data from RS485 ----------------
+void receive() {  //------------------- receive serial data from RS485 ----------------
 
 
   static boolean recvInProgress = false;
@@ -349,15 +350,13 @@ void receive() {          //------------------- receive serial data from RS485 -
 
           ndx = numChars - 1;
         }
-      }
-      else {
-        receivedChars[ndx] = '\0'; // terminate the string
+      } else {
+        receivedChars[ndx] = '\0';  // terminate the string
         recvInProgress = false;
         ndx = 0;
         newData = true;
       }
-    }
-    else if (rc == startMarker) {
+    } else if (rc == startMarker) {
       recvInProgress = true;
     }
   }
@@ -367,88 +366,75 @@ void receive() {          //------------------- receive serial data from RS485 -
 
 void showNewDataHEX() {
 
-  //  this code prints every 10 seconds to make it easier to read on the serial console
 
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.print("Recieved data packet   ");
 
-  counter ++;                   //  increment counter one per second
-  //if (counter > 10) {           //  run the following code once per 10 seconds
+  if (newData == true) {
+    for (int i = 0; i < 35; i++) {
 
-    Serial.println(" ");
-    Serial.println(" ");
-    Serial.print("Recieved data packet   ");
-
-    if (newData == true) {
-      for (int i = 0; i < 35; i++) {
-
-        Serial.print(receivedChars[i], HEX);
-        Serial.print(" ");
-      }
+      Serial.print(receivedChars[i], HEX);
+      Serial.print(" ");
     }
-    newData = false;
-    Serial.println(" ");
+  }
+  newData = false;
+  Serial.println(" ");
+  Serial.print("Voltage  ");
+  Serial.print(Voltage);
+  Serial.println(" V");
+  Serial.print("current  ");
+  Serial.print(current);
+  Serial.println(" A");
+  Serial.print("balance capacity  ");
+  Serial.print(Ah_rate);
+  Serial.println(" Ah");
+  Serial.print("software verion   ");
+  Serial.println(versionNo, DEC);
+  Serial.print("remaing capacity  ");
+  Serial.print(RSOC);
+  Serial.println(" %");
+  Serial.print("temperature 1:  ");
+  Serial.print(temperature_1);
+  Serial.println(" 'C");
+  Serial.print("temperature 2:  ");
+  Serial.print(temperature_2);
+  Serial.println(" 'C");
+  Serial.print("temperature 3:  ");
+  Serial.print(temperature_3);
+  Serial.println(" 'C");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println("Flags");
+  Serial.println(" ");
+  Serial.print("cell OVP:  ");
+  Serial.println(singleCellOVP);
+  Serial.print("cell UVP:  ");
+  Serial.println(singleCellUVP);
+  Serial.print("pack OVP:  ");
+  Serial.println(packOVP);
+  Serial.print("pack UVP:  ");
+  Serial.println(packUVP);
+  Serial.print("charge Hi Temp:  ");
+  Serial.println(chargeHiTemp);
+  Serial.print("charge Lo Temp:  ");
+  Serial.println(chargeLoTemp);
+  Serial.print("discharge Hi Temp:  ");
+  Serial.println(dischargeHiTemp);
+  Serial.print("discharge Lo Temp:  ");
+  Serial.println(dischargeLoTemp);
+  Serial.print("charge Over Current:  ");
+  Serial.println(chargeOverCurrent);
+  Serial.print("discharge Over Current:  ");
+  Serial.println(dischargeOverCurrent);
+  Serial.print("short Circuit flag:  ");
+  Serial.println(shortCircuit_flag);
+  Serial.print("front End Ic Fail Flag:  ");
+  Serial.println(frontEndIcFailFlag);
+  Serial.print("Mos Software Lock Flag:  ");
+  Serial.println(MosSoftwareLockFlag);
 
 
-
-
-
-      Serial.print("Voltage  ");
-      Serial.print(Voltage);
-      Serial.println(" V");
-      Serial.print("current  ");
-      Serial.print(current);
-      Serial.println(" A");
-      Serial.print("balance capacity  ");
-      Serial.print(Ah_rate);
-      Serial.println(" Ah");
-      Serial.print("software verion   ");
-      Serial.println(versionNo, DEC);
-      Serial.print("remaing capacity  ");
-      Serial.print(RSOC);
-      Serial.println(" %");
-      Serial.print("temperature 1:  ");
-      Serial.print(temperature_1);
-      Serial.println(" 'C");
-      Serial.print("temperature 2:  ");
-      Serial.print(temperature_2);
-      Serial.println(" 'C");
-      Serial.print("temperature 3:  ");
-      Serial.print(temperature_3);
-      Serial.println(" 'C");
-      Serial.println(" ");
-      Serial.println(" ");
-      Serial.println("Flags");
-      Serial.println(" ");
-      Serial.print("cell OVP:  ");
-      Serial.println(singleCellOVP);
-      Serial.print("cell UVP:  ");
-      Serial.println(singleCellUVP);
-      Serial.print("pack OVP:  ");
-      Serial.println(packOVP);
-      Serial.print("pack UVP:  ");
-      Serial.println(packUVP);
-      Serial.print("charge Hi Temp:  ");
-      Serial.println(chargeHiTemp);
-      Serial.print("charge Lo Temp:  ");
-      Serial.println(chargeLoTemp);
-      Serial.print("discharge Hi Temp:  ");
-      Serial.println(dischargeHiTemp);
-      Serial.print("discharge Lo Temp:  ");
-      Serial.println(dischargeLoTemp);
-      Serial.print("charge Over Current:  ");
-      Serial.println(chargeOverCurrent);
-      Serial.print("discharge Over Current:  ");
-      Serial.println(dischargeOverCurrent);
-      Serial.print("short Circuit flag:  ");
-      Serial.println(shortCircuit_flag);
-      Serial.print("front End Ic Fail Flag:  ");
-      Serial.println(frontEndIcFailFlag);
-      Serial.print("Mos Software Lock Flag:  ");
-      Serial.println(MosSoftwareLockFlag);
-    
-
-
-
-    counter = 0;
   //}
 }
 
@@ -462,53 +448,53 @@ void storeIncoming() {  //---------------------- Store incoming data -----------
 
   //----protection bits -----------------------------------------------------------
 
-  singleCellOVP =        bitRead(prot_status_high_byte, 0);
-  singleCellUVP =        bitRead(prot_status_high_byte, 1);
-  packOVP =              bitRead(prot_status_high_byte, 2);
-  packUVP =              bitRead(prot_status_high_byte, 3);
-  chargeHiTemp =         bitRead(prot_status_high_byte, 4);
-  chargeLoTemp =         bitRead(prot_status_high_byte, 5);
-  dischargeHiTemp =      bitRead(prot_status_high_byte, 6);
-  dischargeLoTemp =      bitRead(prot_status_high_byte, 7);
-  chargeOverCurrent =    bitRead(prot_status_low_byte, 0);
-  dischargeOverCurrent = bitRead(prot_status_low_byte, 1);
-  shortCircuit_flag =    bitRead(prot_status_low_byte, 2);
-  frontEndIcFailFlag =   bitRead(prot_status_low_byte, 3);
-  MosSoftwareLockFlag =  bitRead(prot_status_low_byte, 4);
+  singleCellOVP =         bitRead(prot_status_high_byte, 0);
+  singleCellUVP =         bitRead(prot_status_high_byte, 1);
+  packOVP =               bitRead(prot_status_high_byte, 2);
+  packUVP =               bitRead(prot_status_high_byte, 3);
+  chargeHiTemp =          bitRead(prot_status_high_byte, 4);
+  chargeLoTemp =          bitRead(prot_status_high_byte, 5);
+  dischargeHiTemp =       bitRead(prot_status_high_byte, 6);
+  dischargeLoTemp =       bitRead(prot_status_high_byte, 7);
+  chargeOverCurrent =     bitRead(prot_status_low_byte, 0);
+  dischargeOverCurrent =  bitRead(prot_status_low_byte, 1);
+  shortCircuit_flag =     bitRead(prot_status_low_byte, 2);
+  frontEndIcFailFlag =    bitRead(prot_status_low_byte, 3);
+  MosSoftwareLockFlag =   bitRead(prot_status_low_byte, 4);
 
 
   //------analog values--------------------------------------------------------------
 
-  read_write =              (receivedChars[0]);   //  0x05 = reading BMS  0x03 = writing to BMS
-  error_status =            (receivedChars[1]);   //  0x80 = error        0x00  = OK
-  data_length =             (receivedChars[2]);   //  dta length of received packet including this byte
-  Volt_low_byte =           (receivedChars[3]);   //  required  total Voltage
-  Volt_high_byte =          (receivedChars[4]);   //  required  total Voltage
-  current_low_byte =        (receivedChars[5]);   //  required  current ********* check reads negative
-  current_high_byte =       (receivedChars[6]);   //  required  current ********* check reads negative
-  balance_cap_hbyte =       (receivedChars[7]);   //  4 byte long number
-  balance_cap_lbyte =       (receivedChars[8]);   //  4 byte long number
-  rate_cap_hbyte =          (receivedChars[9]);   //  capcity of battery in mAh i.e. 305000 = 305Ah
-  rate_cap_lbyte =          (receivedChars[10]);  //  capcity of battery in mAh i.e. 305000 = 305Ah
-  cycle_hbyte =             (receivedChars[11]);  //  number of charge / discharge cycles (currently not used)
-  cycle_lbyte =             (receivedChars[12]);  //  number of charge / discharge cycles (currently not used)
-  prod_date_hbyte =         (receivedChars[13]);  //  production date of BMS
-  prod_date_lbyte =         (receivedChars[14]);  //  production date of BMS
-  bal_status_hbyte =        (receivedChars[15]);  //  8 x cell balance flags  0 = not balancing 1 = balance in progress
-  bal_status_lbyte =        (receivedChars[16]);  //  8 x cell balance flags  0 = not balancing 1 = balance in progress
-  prot_status_high_byte =   (receivedChars[19]);  //  8 x cell protection flags 0 = protection off  1 = protection on
-  prot_status_low_byte =    (receivedChars[20]);  //  8 x cell protection flags 0 = protection off  1 = protection on
-  versionNo =               (receivedChars[21]);  //  BMS sofware version
-  RSOC =                    (receivedChars[22]);  //  remaining charge capaicty 0-100%
-  fet_status =              (receivedChars[23]);  //  bit 0 = charge 0  bit 1 = discharge   0 = FET off 1 = FET on
-  num_of_strings =          (receivedChars[24]);  //  number of series connected cells (should read 16)
-  num_of_NTCS =             (receivedChars[25]);  //  number of temperature thermistors (should read 3)
-  temperature_1_low_byte =  (receivedChars[26]);  //  thermistor temperature 1
-  temperatue_1_high_byte =  (receivedChars[27]);  //  thermistor temperature 1
-  temperature_2_low_byte =  (receivedChars[28]);  //  thermistor temperature 2
-  temperatue_2_high_byte =  (receivedChars[29]);  //  thermistor temperature 2
-  temperature_3_low_byte =  (receivedChars[30]);  //  thermistor temperature 3
-  temperatue_3_high_byte =  (receivedChars[31]);  //  thermistor temperature 3
+  read_write =             (receivedChars[0]);   //  0x05 = reading BMS  0x03 = writing to BMS
+  error_status =           (receivedChars[1]);   //  0x80 = error        0x00  = OK
+  data_length =            (receivedChars[2]);   //  dta length of received packet including this byte
+  Volt_low_byte =          (receivedChars[3]);   //  required  total Voltage
+  Volt_high_byte =         (receivedChars[4]);   //  required  total Voltage
+  current_low_byte =       (receivedChars[5]);   //  required  current ********* check reads negative
+  current_high_byte =      (receivedChars[6]);   //  required  current ********* check reads negative
+  balance_cap_hbyte =      (receivedChars[7]);   //  4 byte long number
+  balance_cap_lbyte =      (receivedChars[8]);   //  4 byte long number
+  rate_cap_hbyte =         (receivedChars[9]);   //  capcity of battery in mAh i.e. 305000 = 305Ah
+  rate_cap_lbyte =         (receivedChars[10]);  //  capcity of battery in mAh i.e. 305000 = 305Ah
+  cycle_hbyte =            (receivedChars[11]);  //  number of charge / discharge cycles (currently not used)
+  cycle_lbyte =            (receivedChars[12]);  //  number of charge / discharge cycles (currently not used)
+  prod_date_hbyte =        (receivedChars[13]);  //  production date of BMS
+  prod_date_lbyte =        (receivedChars[14]);  //  production date of BMS
+  bal_status_hbyte =       (receivedChars[15]);  //  8 x cell balance flags  0 = not balancing 1 = balance in progress
+  bal_status_lbyte =       (receivedChars[16]);  //  8 x cell balance flags  0 = not balancing 1 = balance in progress
+  prot_status_high_byte =  (receivedChars[19]);  //  8 x cell protection flags 0 = protection off  1 = protection on
+  prot_status_low_byte =   (receivedChars[20]);  //  8 x cell protection flags 0 = protection off  1 = protection on
+  versionNo =              (receivedChars[21]);  //  BMS sofware version
+  RSOC =                   (receivedChars[22]);  //  remaining charge capaicty 0-100%
+  fet_status =             (receivedChars[23]);  //  bit 0 = charge 0  bit 1 = discharge   0 = FET off 1 = FET on
+  num_of_strings =         (receivedChars[24]);  //  number of series connected cells (should read 16)
+  num_of_NTCS =            (receivedChars[25]);  //  number of temperature thermistors (should read 3)
+  temperature_1_low_byte = (receivedChars[26]);  //  thermistor temperature 1
+  temperatue_1_high_byte = (receivedChars[27]);  //  thermistor temperature 1
+  temperature_2_low_byte = (receivedChars[28]);  //  thermistor temperature 2
+  temperatue_2_high_byte = (receivedChars[29]);  //  thermistor temperature 2
+  temperature_3_low_byte = (receivedChars[30]);  //  thermistor temperature 3
+  temperatue_3_high_byte = (receivedChars[31]);  //  thermistor temperature 3
 }
 //_________________________________________________________________________________________________________
 
@@ -519,23 +505,22 @@ void convert() {
 
   //------ pack voltage ------------------------------------------------------------
 
-  V_result = (Volt_low_byte << 8) + Volt_high_byte;             //  turn 2 bytes into 16 bit int
+  V_result = (Volt_low_byte << 8) + Volt_high_byte;  //  turn 2 bytes into 16 bit int
 
-  Voltage = (V_result * 0.01);                                  //  human readable float for debugging
+  Voltage = (V_result * 0.01);                       //  human readable float for debugging
 
   //------ pack current ------------------------------------------------------------
 
-  I_result = (current_low_byte << 8) + current_high_byte;   //  turn 2 bytes into 16 bit int
+  I_result = (current_low_byte << 8) + current_high_byte;  //  turn 2 bytes into 16 bit int
 
-
-  current = (I_result * 0.01);                            //  human readable float for debugging
+  current = (I_result * 0.01);                             //  human readable float for debugging
 
 
   //----- battery Ah rate in mA --------------------------------------------------------------------------
 
-  rate = (rate_cap_hbyte << 8) + rate_cap_lbyte;      //  turn 2 bytes into 16 bit int
+  rate = (rate_cap_hbyte << 8) + rate_cap_lbyte;  //  turn 2 bytes into 16 bit int
 
-  Ah_rate = (rate / 100);                              //  human readable format for debugging
+  Ah_rate = (rate / 100);                         //  human readable format for debugging
 
   //---------------------------------- temperature 1 -----------------------------------------------------
 
@@ -557,18 +542,15 @@ void convert() {
   temperaureCombined = (temperature_2 + temperature_3) / 2;
 
 
-
-
-
   //convert 2x bytes into 16 bit int
-  byte voltLow = 0xD8; //0x10  4200 0xFF -4200
-  byte voltHigh = 0xF0; //0x19 4200 0xD8 -4200
+  byte voltLow = 0xD8;   //0x10  4200 0xFF -4200
+  byte voltHigh = 0xF0;  //0x19 4200 0xD8 -4200
   uint16_t charge;
   uint16_t discharge;
 
-  int V1 = (voltLow << 8) + voltHigh; //  V1 is the output to the inverter
+  int V1 = (voltLow << 8) + voltHigh;  //  V1 is the output to the inverter
 
-  if (V1 > 0) charge = V1;            //  if the
+  if (V1 > 0) charge = V1;  //  if the
   if (V1 < 0) discharge = abs(V1);
 
 
@@ -578,9 +560,6 @@ void convert() {
 
   byte chargeOutLowByte;
   byte chargeOutHighByte;
-
-
-
   byte dischargeOutLowByte;
   byte dischargeOutHighByte;
 
@@ -591,15 +570,12 @@ void convert() {
 
   dischargeOutLowByte = (discharge >> 8);
   dischargeOutHighByte = discharge;
-
-
-
 }
 
 //_______________________________________________________________________________________________________
 
 
-void canbusSend() { //  ---------- send can bus message to inverter ----------------------------------
+void canbusSend() {  //  ---------- send can bus message to inverter ----------------------------------
 
   //--------------------------------------- packet 1 ------ protection bits --------------------------
 
@@ -614,38 +590,38 @@ void canbusSend() { //  ---------- send can bus message to inverter ------------
   CAN_MSG[6] = 0x4E;  //  sends ASCII 'N'
   CAN_MSG[7] = 0x00;
 
-  byte sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);   //  send manufacurers name
+  byte sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);  //  send manufacurers name
 
   //----------------packet 2------- charge / discharge voltage current temperature-------
 
   addressID = 0x351;  //                            example from martc55 (8 bytes)
 
-  CAN_MSG[0] = chargeVoltageLowByte;                          //  0x30
-  CAN_MSG[1] = dischargeVoltageHighByte;                      //  0x02
-  CAN_MSG[2] = chargeCurrentLimitLowByte;                     //  0xC8
-  CAN_MSG[3] = chargeCurrentLimitHighByte;                    //  0x00
-  CAN_MSG[4] = dischargeCurrentLimitLowByte;                  //  0x58
-  CAN_MSG[5] = dischargeCurrentLimitHighByte;                 //  0x02
-  CAN_MSG[6] = byte_C6; //  not used                          //  0x00
-  CAN_MSG[7] = byte_C7; //  not used                          //  0x00
+  CAN_MSG[0] = chargeVoltageLowByte;           //  0x30
+  CAN_MSG[1] = dischargeVoltageHighByte;       //  0x02
+  CAN_MSG[2] = chargeCurrentLimitLowByte;      //  0xC8
+  CAN_MSG[3] = chargeCurrentLimitHighByte;     //  0x00
+  CAN_MSG[4] = dischargeCurrentLimitLowByte;   //  0x58
+  CAN_MSG[5] = dischargeCurrentLimitHighByte;  //  0x02
+  CAN_MSG[6] = byte_C6;                        //  not used                          //  0x00
+  CAN_MSG[7] = byte_C7;                        //  not used                          //  0x00
 
-  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);        //  send manufacurers name
+  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);  //  send manufacurers name
 
   //-------------- packet 3---------- state of charge, state of health -----------------
 
   addressID = 0x355;  //                            example from martc55 (4 bytes)
 
-  CAN_MSG[0] = stateOfChargeLowByte;                          //  0x41
-  CAN_MSG[1] = stateOfChargeHighByte;                         //  0x00
-  CAN_MSG[2] = stateOfHealthLowByte;                          //  0x63
-  CAN_MSG[3] = stateOfHealthHighByte;                         //  0x00
+  CAN_MSG[0] = stateOfChargeLowByte;   //  0x41
+  CAN_MSG[1] = stateOfChargeHighByte;  //  0x00
+  CAN_MSG[2] = stateOfHealthLowByte;   //  0x63
+  CAN_MSG[3] = stateOfHealthHighByte;  //  0x00
   CAN_MSG[4] = 0x00;
   CAN_MSG[5] = 0x00;
   CAN_MSG[6] = 0x00;
   CAN_MSG[7] = 0x00;
 
 
-  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);        //  send manufacurers name
+  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);  //  send manufacurers name
 
   //------------------- packet 4 --------canbus send voltage current temperature-------------
 
@@ -662,7 +638,7 @@ void canbusSend() { //  ---------- send can bus message to inverter ------------
 
 
 
-  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);        //  send manufacurers name
+  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);  //  send manufacurers name
 
   //---------------- packet 5 ----------charge request flags----------------------
 
@@ -674,7 +650,7 @@ void canbusSend() { //  ---------- send can bus message to inverter ------------
   //  *byte 0 bit 1 = 1 (discharge enable
 
 
-  CAN_MSG[0] = 0xC0;    //  this byte used only as per *
+  CAN_MSG[0] = 0xC0;  //  this byte used only as per *
   CAN_MSG[1] = 0x00;
   CAN_MSG[2] = 0x00;
   CAN_MSG[3] = 0x00;
@@ -684,7 +660,7 @@ void canbusSend() { //  ---------- send can bus message to inverter ------------
   CAN_MSG[7] = 0x00;
 
 
-  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG); //  send manufacurers name
+  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, CAN_MSG);  //  send manufacurers name
 
 
   //-------------packet 6 ---------canbus send manufactures name----------------------
@@ -701,7 +677,7 @@ void canbusSend() { //  ---------- send can bus message to inverter ------------
   MSG_RustyK[7] = 8;
 
 
-  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, MSG_RustyK); //  send manufacurers name
+  sndStat = CAN0.sendMsgBuf(addressID, 0, 8, MSG_RustyK);  //  send manufacurers name
 
 
   //   example from martc55 (8 bytes)
@@ -714,24 +690,18 @@ void canbusSend() { //  ---------- send can bus message to inverter ------------
   //CAN_MSG[5] = 0x20;  //  ' '
   //CAN_MSG[6] = 0x20;  //  ' '
   //CAN_MSG[7] = 0x20;  //  ' '
-
-
 }
 //__________________________________________________________________________________________________
 
-void temperatureControl() { //------- turn heater on bellow value set in declarations section
+void temperatureControl() {  //------- turn heater on bellow value set in declarations section
 
 
-  if (temperaureCombined < heaterSet) digitalWrite (heater, HIGH); //  turn on heater and heater led
-  if (temperaureCombined > heaterSet) digitalWrite (heater, LOW); //  turn on heater and heater led
+  if (temperaureCombined < heaterSet) digitalWrite(heater, HIGH);  //  turn on heater and heater led
+  if (temperaureCombined > heaterSet) digitalWrite(heater, LOW);   //  turn on heater and heater led
 
 
   //***************** this will likely need some sort of hysteresis added although it operates at
   //                  1 second intervals
-
-
-
-
 }
 //************************* end of code ***********************************************************
 
@@ -824,7 +794,7 @@ void temperatureControl() { //------- turn heater on bellow value set in declara
 
   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  the inverter should rely with:
+  the inverter should relpy with:
 
       0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
 
