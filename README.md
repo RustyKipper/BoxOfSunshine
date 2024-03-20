@@ -42,13 +42,17 @@ Shortly after the bluetooth started to randomly drop out, this became worse over
 
 update 20/3/2024
 
-Main control panel pretty much finished:
+Main control panel prety much finished:
 ![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/a5bf5a7c-004c-4efd-84b1-7521f7a99042)
-Shown in the above picture,   
-bottom left FDTI serial adaptor for reading dta from the pcb to the IDE serial console, unable to program via this connection as yet but serial reading works perfectly.   
-Top left, Arduino Uno set up as an ICSP.   
+Shown in the above picture,     
+
+bottom left FDTI serial adaptor for reading data from the pcb to the IDE serial console, unable to program via this connection as yet but serial reading works perfectly.   
+Top left, Arduino Uno set up as an ICSP programmer.      
+
 Top, no not an improvised explosive device but a temporary 16S battery pack bade from redundant ebike cells.      
-Top right, safety cover for the solid state relay   
+
+Top right, safety cover for the solid state relay     
+
 Right phone connnected by bluetooth showing the battery data, the BMS is currently faulty but the battery voltage is correct and all 16 cells are showing.
 
 An RS485 / BMS simulator has been knocked up to test the circuit board which seems to be working nicely.
