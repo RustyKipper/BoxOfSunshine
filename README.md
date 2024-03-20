@@ -39,5 +39,14 @@ All components have been fitted into the control box which is made from 2mm shee
 A temporary battery has been assembled from 16 x 18650 cells from a defunkt ebike battery and connected to the 'voltage sense' inputs of the pcb and the relevent wires to the BMS together with the battery -Ve wire. A small issue was found with the hard coding part of the pcb which was discoverd when only 13 of the cells showed on the Overkill solar (bluetooth) app, this was soon remidied and the app then showed the full 16 cells with a stable reading of 67.5V which tallied with a reading from a DVM.
 Shortly after the bluetooth started to randomly drop out, this became worse over a period of minutes until the app is constantly 'waiting for BMS'. The BMS is still showing in the serach, all data held in the BMS has been lost, the temperature inputs are shwoing -273 degress. The blue led on the BMS is flashing at 1 second intervals.
 
+update 20/3/2024
+
+Main control panel pretty much finished:
+![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/a5bf5a7c-004c-4efd-84b1-7521f7a99042)
+
+An RS485 / BMS simulator has been knocked up to test the circuit board which seems to be working nicely:
+
+
+
 
 
