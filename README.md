@@ -51,6 +51,12 @@ Below is a screen print of the circuit communicating with the simulator:
 
 ![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/25764f8c-7513-4db7-b8c3-45b2d03e98da)
 
+Shown in the above picture, bottom left FDTI serial adaptor for reading dta from the pcb to the IDE serial console, unable to program via this connection as yet but serial reading works perfectly.
+Top left, Arduino Uno set up as an ICSP.
+Top, no not an improvised explosive device but a temporary 16S battery pack bade from redundant ebike cells
+Top right, safety cover for the solid state relay
+Right phone connnected by bluetooth showing the battery data, the BMS is currently faulty but the battery voltage is correct and all 16 cells are showing.
+
 
 
 
