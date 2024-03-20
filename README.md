@@ -21,7 +21,8 @@ The custom PCB will act as a 'companion' board to the BMS and will need to satis
  
 4. To control a heating system to keep the battery pack above a set minimum temperature. This is done by monitoring the pack temperature via the data received from the BMS and in turn operates a solid state relay. A solid state relay was       chosen to eliminate any switching noise as 'SSR's generaly use a zero volt switching technique and prevents contacts from erroding in use. A fail safe over temperature switch is to be incorperated onto the internal battery heater          plate in case of the relay failing short circuit.
 
-![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/8fdd459a-3a08-4481-8e2a-692963963aa8)
+![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/8fdd459a-3a08-4481-8e2a-692963963aa8)![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/9b425dc8-65a4-48dd-9d57-255c842ff658)
+
 
 The PCB will use an ATMEG328P-AU micro controller as these are cheap, convienient to mount and program by the Arduino IDE. An ICSP port is to be fitted to the board to allow the code to be uploaded and a serial port for debugging purposes.
 RS485 comms is to be handled by the ubiqitus MAX485 and Can bus by a TJA1052I which acording to the data sheet should provide 5000V isolation. 2 x SIL isolated DC-DC converter modules are used to both provide 5V for the logic cicuitry and the power for the output side of the Can bus tranceiver. An RJ45 socket is fitted to the board to allow direct connection to the inverter with via the supplied cable.
