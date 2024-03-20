@@ -1,5 +1,6 @@
-/* load this code onto a uno or similar colete with an RS485 shield, the uno will then act as 
- *  a BMS simulator in the absence of or to fault find the BMS.
+/* load this code onto a uno or similar complete with an RS485 shield, the uno will then act as 
+ *  a BMS simulator in the absence of the BMS. Tested and working with my BMS interface board.
+
  *  Results shown when using the BMS to inverter interface board code should give the following results;
  *  Voltsge = 41.21 V
  *  current = -100 A
@@ -11,15 +12,25 @@
  */
 
 
+/*
+**************************************************************************************************
+                             Disclaimer
+
+Please feel free to use or modify this code, however I am in no way a profesional programer and this
+code is very much work in progress so there will be bugs and mistakes, therefore I can and will not
+be held responsible for any loss damage or mishaps resulting from the use of this code.
+**************************************************************************************************
+*/
+
+//  version 1.0
 
 #include <SoftwareSerial.h>
 
-const byte rxPin = 2;
-const byte txPin = 3;
-const byte TX_enable = 4;
-int ledPin = 13;
-int analogPin = A0;
-int analogValue = 0;
+const byte rxPin = 2;                 //  RS485 rx pin
+const byte txPin = 3;                 //  RS485 tx pin
+const byte TX_enable = 4;             //  RS485 tx enable pin
+int ledPin = 13;                      //  led pin for debugging
+
 
 bool ledState = LOW;
 
@@ -49,11 +60,13 @@ void setup() {
 }
 //----------------------------------------------------------------------------
 
+//  data request from BMS should be
 
-//DD  A5  AA  0 FF  56  77
-//221 165 170 0 255 86  119
-// from eprom read
+//DD  A5  AA  0 FF  56  77  (HEX)
+//221 165 170 0 255 86  119 (DEC)
 
+//  0xDD = start bit
+//  0x77 = stop bit
 
 
 
@@ -62,9 +75,6 @@ void loop() {
   //---------------------- untimed code ----------------------------------------------------
 
   receive();
-
-
-
 
 
 
@@ -79,40 +89,17 @@ void loop() {
     previousMillis = currentMillis;
     //----------------------------- timed code, this code runs once per second --------------------------
 
-/*
-Serial.print(receivedChars[0]);
-Serial.print(" ");
-Serial.print(receivedChars[1]);
-Serial.print(" ");
-Serial.print(receivedChars[2]);
-Serial.print(" ");
-Serial.print(receivedChars[3]);
-Serial.print(" ");
-Serial.print(receivedChars[4]);
-Serial.println(" ");
-*/
+
+showNewData();  //  show request data from BMS on serial console
 
 
-showNewData();
-
-
-
-
-
-
-
-   
-    if (receivedChars[0]== 0xA5) reply();
-
+    if (receivedChars[0]== 0xA5) reply(); //  if first part of the requet is correct send data packet
 
 
   }
 }
 
 //----------------- end of loop ------------------------------------------------------
-
-
-
 //_________________________________________________________________________________________
 
 void receive() {          //------------------- receive serial data from RS485 ----------------
@@ -157,24 +144,16 @@ void receive() {          //------------------- receive serial data from RS485 -
 void reply() {
 
 
-
-
   //                 | A   |  B  |C |  D  |  E  | F   | G   |  H  | I   |     J     |  K  |  L  |M |N | O   |  p  |Q | R   |S |T| U |V| W   |  X  |  Y  |  Z   | a   | b  |  c   | d   | d  |  f   |g |h |   i     |   j     |  k   |l|     m      | n   |
   uint8_t data[40] = {0xDD, 0x03, 0, 0x26, 0x10, 0x19, 0xD8, 0xF0, 0x4C, 0xFFFFFF8E, 0x4E, 0x20, 0, 0, 0x2D, 0x5C, 0, 0x0A, 0, 0, 0, 0, 0x40, 0x62, 0x03, 0x0A, 0x3, 0x0B, 0xA3, 0x0B, 0xA4, 0x0B, 0xA5, 0, 0xCF256F, 0xCA5200, 0x3E8, 0, 0xC400C500, 0x77};
   //                                           42.10V      100A                                                                                                    T1    T1 x  T2    t2 x  t3    t3 x
- 
   
-  
-  digitalWrite(TX_enable,HIGH);
-  digitalWrite(ledPin,HIGH);
-
-  
-  RS485Serial.write(data, 40);
-
-  delay(3);
-
-  digitalWrite(TX_enable,LOW);
-  digitalWrite(ledPin,LOW);
+  digitalWrite(TX_enable,HIGH);   //  set RS485 transmit enable pin high
+  digitalWrite(ledPin,HIGH);      //  set on board led on
+  RS485Serial.write(data, 40);    //  send the data packet to the BMS
+  delay(3);                       //  short delat to enable serial time to finish
+  digitalWrite(TX_enable,LOW);    //  set RS485 transmit enable pin low
+  digitalWrite(ledPin,LOW);       //  turn off on board led
 
 }
 
