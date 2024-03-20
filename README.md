@@ -46,7 +46,8 @@ Main control panel pretty much finished:
 
 An RS485 / BMS simulator has been knocked up to test the circuit board which seems to be working nicely:
 
-![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/163600e2-1889-4812-b2cc-d5b1fdfffff7)
+![image](https://github.com/RustyKipper/BoxOfSunshine/assets/160714870/25764f8c-7513-4db7-b8c3-45b2d03e98da)
+
 
 
 
