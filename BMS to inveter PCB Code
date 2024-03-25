@@ -22,6 +22,8 @@
    The code is currently set to debug mode so the serial output of the board can be read via the
    Arduino IDE serial monitor.
 
+   Currently the canbus section needs work and has not been tested with an inverter.
+
 */
 /*
 **************************************************************************************************
